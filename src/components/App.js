@@ -23,12 +23,14 @@ import { auth, login, tokenCheck } from '../utils/auth';
 function App() {
 
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [isRegistered, setIsRegistered] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = React.useState(false);
   const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = React.useState(false);
   const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = React.useState(false);
-  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = React.useState(false);
-  const [isFailPopupOpen, setIsFailPopupOpen] = React.useState(false);
+  const [isInfoTipsPopupOpen, setIsInfoTipsPopupOpen] = React.useState(false);
+  const [infoTipsTitle, setInfoTipsTitle] = React.useState('');
+  const [infoTipsImgPath, setInfoTipsImgPath] = React.useState('');
   const [cards, setCards] = React.useState([]);
   const [selectedCard, setSelectedCard] = React.useState(null);
   const [currentUser, setCurrentUser] = React.useState({ name: 'Жак-Ив Кусто', about: 'Исследователь морей', avatar: avatarPath, _id: '' });
@@ -53,10 +55,10 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    if (!isSuccessPopupOpen) {
+    if (!isInfoTipsPopupOpen && isRegistered) {
       history.push('/sign-in')
     }
-  }, [isSuccessPopupOpen])
+  }, [isInfoTipsPopupOpen])
 
   React.useEffect(() => {
     if (isLoggedIn) {
@@ -75,8 +77,7 @@ function App() {
       .catch((err) => {
         console.log(`Произошла ошибка при загрузки данных пользователя: ` + err);
       })
-  }},
-    [isLoggedIn]);
+  }}, [isLoggedIn]);
 
   React.useEffect(() => {
     if (isLoggedIn) {
@@ -111,8 +112,7 @@ function App() {
     isEditProfilePopupOpen && setIsEditProfilePopupOpen(false);
     isAddPlacePopupOpen && setIsAddPlacePopupOpen(false);
     isConfirmPopUpOpen && setConfirmPopUpOpen(false);
-    isSuccessPopupOpen && setIsSuccessPopupOpen(false);
-    isFailPopupOpen && setIsFailPopupOpen(false);
+    isInfoTipsPopupOpen && setIsInfoTipsPopupOpen(false);
     (selectedCard != null) && setSelectedCard(null);
     (selectedCardToDelete != null) && setSelectedCardToDelete(null);
   }
@@ -154,7 +154,7 @@ function App() {
     api.patchAvatar(link)
       .then((userData) => {
         setCurrentUser(userData);
-        closeAllPopups();
+        closeAllPopups();;
       })
       .catch((err) => {
         console.log(`Произошла ошибка при сохранении аватара пользователя: ` + err);
@@ -217,10 +217,17 @@ function App() {
     setIsLoading(true);
     auth(email, password)
       .then(() => {
-        setIsSuccessPopupOpen(true);
+        setInfoTipsTitle("Вы успешно зарегистрировались!");
+        setInfoTipsImgPath(successImgPath);
+        setIsInfoTipsPopupOpen(true);
+        setIsRegistered(true);
       })
       .catch((err) => {
-        console.log(`Произошла ошибка при регистрации: ` + err);
+        setInfoTipsTitle("Что-то пошло не так! Попробуйте еще раз.");
+        setInfoTipsImgPath(failImgPath);
+        setIsInfoTipsPopupOpen(true);
+        setIsRegistered(false);
+        console.log(`Произошла ошибка при регистрации: ` +  err);
       })
       .finally(() => {
         setIsLoading(false);
@@ -232,11 +239,14 @@ function App() {
     login(email, password)
       .then((res) => {
         localStorage.setItem('token', res.token);
+        setEmail(email);
         setIsLoggedIn(true);
       })
       .catch((err) => {
         console.log(`Произошла ошибка при проверке токена: ` + err);
-        setIsFailPopupOpen(true);
+        setInfoTipsTitle("Что-то пошло не так! Попробуйте еще раз.");
+        setInfoTipsImgPath(failImgPath);
+        setIsInfoTipsPopupOpen(true);
       })
       .finally(() => {
         setIsLoading(false);
@@ -247,7 +257,6 @@ function App() {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
   }
-
 
   return (
     <CurrentUserContext.Provider value={currentUser}>
@@ -266,8 +275,26 @@ function App() {
               onCardDelete={handleCardDelete} />
 
             <Footer />
+          </ProtectedRoute>
+          
+          <Route path="/sign-up">
+            <Register
+              isLoading={isLoading}
+              submitText="Зарегистрироваться"
+              submitLoadingText="Регистрация..."
+              onSubmit={handleRegister} />
+          </Route>
 
-            <EditProfilePopup
+          <Route path="/sign-in">
+            <Login
+              isLoading={isLoading}
+              submitText="Войти"
+              submitLoadingText="Вход..."
+              onSubmit={handleLogin} />
+          </Route>
+        </Switch>
+        
+        <EditProfilePopup
               isOpen={isEditProfilePopupOpen}
               onClose={closeAllPopups}
               onUpdateUser={handleUpdateUser}
@@ -293,41 +320,13 @@ function App() {
               isLoading={isLoading} />
 
             <ImagePopup card={selectedCard} onClose={closeAllPopups} />
-          </ProtectedRoute>
-          
-          <Route path="/sign-up">
-            <Register
-              isLoading={isLoading}
-              submitText="Зарегистрироваться"
-              submitLoadingText="Регистрация..."
-              onSubmit={handleRegister} />
+            
             <InfoTips
               name="info"
-              isOpen={isSuccessPopupOpen}
-              title="Вы успешно зарегистрированы!"
-              img={successImgPath}
+              isOpen={isInfoTipsPopupOpen}
+              title={infoTipsTitle}
+              img={infoTipsImgPath}
               onClose={closeAllPopups} />
-          </Route>
-
-          <Route path="/sign-in">
-            <Login
-              isLoading={isLoading}
-              submitText="Войти"
-              submitLoadingText="Вход..."
-              onSubmit={handleLogin} />
-            <InfoTips
-              name="info"
-              isOpen={isFailPopupOpen}
-              title="Что-то пошло не так! Попробуйте ещё раз."
-              img={failImgPath}
-              onClose={closeAllPopups} />
-          </Route>
-
-          
-
-        </Switch>
-
-
       </div>
     </CurrentUserContext.Provider>
   );
