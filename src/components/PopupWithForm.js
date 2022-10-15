@@ -11,6 +11,8 @@ function PopupWithForm({
 }) {
   const className = `popup popup_type_${name} ${isOpen && 'popup_opened'}`;
 
+  const btnClassName = `btn btn_type_submit ${isLoading && "btn_inactive"}`;
+
   return (
     <div className={className}>
       <div className="popup__container">
@@ -28,7 +30,7 @@ function PopupWithForm({
           <input
             type="submit"
             value={isLoading ? submitLoadingText : submitText}
-            className="btn btn_type_submit" />
+            className={btnClassName} />
         </form>
       </div>
     </div>
